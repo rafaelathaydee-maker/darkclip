@@ -1,26 +1,166 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* ─── Design Tokens ─────────────────────────────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Surfaces */
+  --color-bg:         oklch(7% 0.008 280);
+  --color-surface:    oklch(10% 0.010 280);
+  --color-surface-2:  oklch(13% 0.012 280);
+  --color-surface-3:  oklch(17% 0.014 280);
+  --color-border:     oklch(20% 0.015 280);
+  --color-border-2:   oklch(28% 0.018 280);
+
+  /* Text */
+  --color-text:       oklch(92% 0.008 280);
+  --color-muted:      oklch(55% 0.010 280);
+  --color-faint:      oklch(35% 0.008 280);
+
+  /* Accent — electric violet */
+  --color-accent:     oklch(72% 0.28 295);
+  --color-accent-2:   oklch(60% 0.24 295);
+  --color-accent-dim: oklch(55% 0.22 295);
+
+  /* Error — form validation only */
+  --color-error:      oklch(58% 0.18 25);
+
+  /* Typography */
+  --font-sans:  var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono:  var(--font-geist-mono), ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Base Reset ─────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: oklch(25% 0.015 280);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover { background: oklch(35% 0.020 280); }
+
+/* ─── Selection ──────────────────────────────────────────────── */
+::selection {
+  background: oklch(72% 0.28 295 / 0.25);
+  color: var(--color-text);
+}
+
+/* ─── Utility Classes ────────────────────────────────────────── */
+@layer utilities {
+  .glass {
+    background: oklch(13% 0.010 280 / 0.75);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border: 1px solid oklch(25% 0.015 280 / 0.5);
+  }
+
+  .glow-accent {
+    box-shadow:
+      0 0 0 1px oklch(72% 0.28 295 / 0.35),
+      0 0 20px oklch(72% 0.28 295 / 0.15),
+      0 0 40px oklch(72% 0.28 295 / 0.06);
+  }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+/* ─── Keyframes ──────────────────────────────────────────────── */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes orb-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.05); }
+  66% { transform: translate(-20px, 15px) scale(0.97); }
+}
+
+/* Signal flicker — LIVE badge */
+@keyframes signal-flicker {
+  0%, 100% { opacity: 1; }
+  92%       { opacity: 1; }
+  94%       { opacity: 0.45; }
+  95%       { opacity: 1; }
+  97%       { opacity: 0.7; }
+  98%       { opacity: 1; }
+}
+
+/* Shimmer sweep — PRO badge */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+/* Ken Burns — card hover "autoplay" pan */
+@keyframes ken-burns {
+  0%   { transform: scale(1.0)  translate( 0%,  0%); }
+  50%  { transform: scale(1.08) translate(-1.5%, -1%); }
+  100% { transform: scale(1.06) translate( 1%,   1%); }
+}
+
+/* Playback progress bar */
+@keyframes progress-play {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* Hero scan-line sweep */
+@keyframes scan-line {
+  0%   { top: -2px;   opacity: 0; }
+  3%   { opacity: 1; }
+  97%  { opacity: 0.6; }
+  100% { top: 100%;   opacity: 0; }
+}
+
+/* Hero floating metric cards */
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%      { transform: translateY(-10px) rotate(0.5deg); }
+}
+@keyframes float-slow-2 {
+  0%, 100% { transform: translateY(0px); }
+  50%      { transform: translateY(-14px); }
+}
+@keyframes float-slow-3 {
+  0%, 100% { transform: translateY(-4px); }
+  50%      { transform: translateY(6px); }
+}
+
+/* Counter breathing — feed "alive" pulse */
+@keyframes breathe {
+  0%, 100% { opacity: 1;    transform: scale(1); }
+  50%      { opacity: 0.72; transform: scale(0.98); }
+}
+
+/* PRO locked — slow hidden-content drift */
+@keyframes locked-drift {
+  0%, 100% { transform: scale(1.08) translate(0%, 0%); }
+  50%      { transform: scale(1.12) translate(-2%, -1.5%); }
+}
+
+/* ─── Motion Reduction ───────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

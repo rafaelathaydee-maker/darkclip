@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local lead + event data — never commit real user data to git
+/data/
+
+# Claude Code session files
+.claude/
