@@ -15,6 +15,7 @@ import { useToast } from '@/lib/toast'
 import { useConversion } from '@/lib/conversion'
 import { useFounder } from '@/lib/founder'
 import { getDemoClipPath, downloadDemoClip, toFilename } from '@/lib/download'
+import { getAlternateThumbnail } from '@/lib/visual-assets'
 import { getYouTubeId } from '@/types'
 import type { VideoItem } from '@/types'
 
@@ -64,14 +65,12 @@ export function VideoDetailDrawer({ video, onClose }: VideoDetailDrawerProps) {
   useEffect(() => { setThumbSrc(video.thumbnail); thumbAttempt.current = 0 }, [video.id, video.thumbnail])
 
   const handleThumbError = () => {
-    if (!ytId) return
-    const fallbacks = [
-      `https://i.ytimg.com/vi/${ytId}/sddefault.jpg`,
-      `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`,
-      `https://i.ytimg.com/vi/${ytId}/mqdefault.jpg`,
-    ]
-    const idx = thumbAttempt.current++
-    if (idx < fallbacks.length) setThumbSrc(fallbacks[idx])
+    // Use alternate images from the niche visual pool — always guaranteed to work
+    const offset = thumbAttempt.current + 1
+    thumbAttempt.current++
+    if (thumbAttempt.current <= 4) {
+      setThumbSrc(getAlternateThumbnail(video.niche, video.id, offset))
+    }
   }
   const embedSrc = ytId
     ? `https://www.youtube.com/embed/${ytId}?autoplay=1&mute=0&controls=1&rel=0&modestbranding=1&origin=${typeof window !== 'undefined' ? window.location.origin : ''}`
@@ -142,28 +141,12 @@ export function VideoDetailDrawer({ video, onClose }: VideoDetailDrawerProps) {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-border)] shrink-0">
               <span className="text-[13px] font-semibold text-[var(--color-text)]">Clip Intel</span>
-              <div className="flex items-center gap-2">
-                {ytUrl && (
-                  <button
-                    onClick={handleWatchOnYouTube}
-                    className={cn(
-                      'flex items-center gap-1.5 h-7 px-3 rounded-lg',
-                      'text-[11px] font-medium',
-                      'bg-[var(--color-accent)]/12 border border-[var(--color-accent)]/30 text-[var(--color-accent)]',
-                      'hover:bg-[var(--color-accent)]/20 transition-all duration-150'
-                    )}
-                  >
-                    <PlayCircle size={11} />
-                    Watch
-                  </button>
-                )}
-                <button
-                  onClick={onClose}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-faint)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-2)] transition-colors"
-                >
-                  <X size={15} />
-                </button>
-              </div>
+              <button
+                onClick={onClose}
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-[var(--color-faint)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-2)] transition-colors"
+              >
+                <X size={15} />
+              </button>
             </div>
 
             {/* ── Media section ─────────────────────────────────── */}

@@ -1,5 +1,6 @@
 import type { VideoItem, NicheId, VideoFormat } from '@/types'
 import type { YouTubeSearchItem, YouTubeVideoItem } from './types'
+import { getNicheThumbnail } from '@/lib/visual-assets'
 
 // ─── Duration ────────────────────────────────────────────────────────────────
 
@@ -82,24 +83,14 @@ function regionForVideo(niche: NicheId, videoId: string): string {
 // ─── Thumbnail ───────────────────────────────────────────────────────────────
 
 /**
- * Best available thumbnail URL for a YouTube video.
+ * Curated niche thumbnail — uses the visual-assets pool for a deterministic,
+ * always-beautiful portrait image regardless of YouTube CDN availability.
  *
- * We ALWAYS start with `maxresdefault.jpg` (1280×720) constructed directly from
- * the video ID — search.list rarely returns maxres in the snippet, but the CDN
- * URL is valid whenever the creator set a custom thumbnail.
- *
- * For Shorts, `hqdefault.jpg` (the API's "high" thumbnail) is a landscape
- * 480×360 frame that often shows pillarbox black bars or a dark auto-generated
- * frame. `maxresdefault.jpg` and `sddefault.jpg` tend to have better frames.
- *
- * The VideoCard component has an `onError` fallback chain that automatically
- * tries `sddefault.jpg` → `hqdefault.jpg` → `mqdefault.jpg` if this 404s.
+ * YouTube provides the signal (title, creator, viral score).
+ * visual-assets provides the premium visual.
  */
-function bestThumbnail(item: YouTubeSearchItem): string {
-  const id = item.id.videoId
-  // Start with maxresdefault — best quality, custom thumbnails always here.
-  // The onError chain in VideoCard handles 404s gracefully.
-  return `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`
+function bestThumbnail(item: YouTubeSearchItem, niche: NicheId): string {
+  return getNicheThumbnail(niche, item.id.videoId)
 }
 
 // ─── Creator handle ──────────────────────────────────────────────────────────
@@ -171,7 +162,7 @@ export function normalizeVideo(
     youtubeId:    videoId,
     title:        title.replace(/\s*#shorts\s*/gi, '').trim() || title,
     creator:      formatCreator(channelTitle),
-    thumbnail:    bestThumbnail(searchItem),
+    thumbnail:    bestThumbnail(searchItem, niche),
     viralScore,
     growthPercent,
     views,

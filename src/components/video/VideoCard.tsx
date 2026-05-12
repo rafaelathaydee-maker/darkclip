@@ -15,6 +15,7 @@ import { useFounder } from '@/lib/founder'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { getYouTubeId } from '@/types'
 import type { VideoItem } from '@/types'
+import { getAlternateThumbnail } from '@/lib/visual-assets'
 
 interface VideoCardProps {
   video: VideoItem
@@ -44,20 +45,13 @@ export function VideoCard({ video, locked = false, onOpen }: VideoCardProps) {
   }, [video.id, video.thumbnail])
 
   const handleThumbError = useCallback(() => {
-    const ytId = getYouTubeId(video)
-    if (!ytId) return                      // mock data — no fallbacks needed
-
-    const fallbacks = [
-      `https://i.ytimg.com/vi/${ytId}/sddefault.jpg`,
-      `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`,
-      `https://i.ytimg.com/vi/${ytId}/mqdefault.jpg`,
-    ]
-
-    const idx = thumbAttempt.current++
-    if (idx < fallbacks.length) {
-      setThumbSrc(fallbacks[idx])
+    // Use alternate images from the niche visual pool — always guaranteed to work
+    const offset = thumbAttempt.current + 1
+    thumbAttempt.current++
+    if (thumbAttempt.current <= 4) {
+      setThumbSrc(getAlternateThumbnail(video.niche, video.id, offset))
     }
-    // If all fallbacks exhausted the container bg-surface-3 acts as placeholder
+    // After 4 attempts, container bg-surface-3 shows as placeholder
   }, [video])
   const toast                         = useToast()
   const { openModal }                 = useConversion()
@@ -65,6 +59,7 @@ export function VideoCard({ video, locked = false, onOpen }: VideoCardProps) {
   const { track }                     = useAnalytics()
 
   const effectiveLocked = locked && !isPro
+  // ytId used only for embed preview — card click always opens drawer
   const ytId            = getYouTubeId(video)
 
   // Build embed URL for hover preview
@@ -116,19 +111,14 @@ export function VideoCard({ video, locked = false, onOpen }: VideoCardProps) {
 
   // Primary card click:
   //   • Locked  → conversion modal
-  //   • Real YT → open YouTube Short in new tab
-  //   • Mock    → open details drawer (fallback)
+  //   • Unlocked → always open in-site VideoDetailDrawer
+  //   YouTube link is secondary — only in the drawer ("View source")
   const handleClick = () => {
     if (effectiveLocked) {
       track('locked_card_click', video.niche)
       openModal('locked_card')
       return
     }
-    if (ytId) {
-      window.open(`https://www.youtube.com/shorts/${ytId}`, '_blank', 'noopener,noreferrer')
-      return
-    }
-    // Mock / demo item — fall back to drawer
     onOpen?.(video)
   }
 
