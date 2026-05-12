@@ -18,10 +18,13 @@ export function parseISODuration(iso: string): number {
 export function formatAgo(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime()
   const mins  = Math.floor(ms / 60_000)
-  if (mins < 60)              return `${mins}m ago`
+  if (mins < 1)                return 'just now'
+  if (mins < 60)               return `${mins}m ago`
   const hours = Math.floor(mins / 60)
-  if (hours < 48)             return `${hours}h ago`
-  return `${Math.floor(hours / 24)}d ago`
+  if (hours < 48)              return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 30)               return `${days}d ago`
+  return `${Math.floor(days / 30)}mo ago`
 }
 
 // ─── Scoring ─────────────────────────────────────────────────────────────────
@@ -35,7 +38,7 @@ export function formatAgo(iso: string): string {
  */
 function computeViralScore(views: number, publishedAt: string): number {
   const hours  = Math.max(0.5, (Date.now() - new Date(publishedAt).getTime()) / 3_600_000)
-  const vph    = views / hours                        // views per hour
+  const vph    = views / hours
   const score  = Math.round(Math.log10(vph + 1) * 24.75)
   return Math.min(99, Math.max(50, score))
 }
@@ -47,22 +50,88 @@ function computeViralScore(views: number, publishedAt: string): number {
 function estimateGrowthPct(views: number, publishedAt: string): number {
   const hours  = Math.max(1, (Date.now() - new Date(publishedAt).getTime()) / 3_600_000)
   const vph    = views / hours
-  // 100 vph → ~30%, 1k → ~300%, 10k → ~3000%
   return Math.max(50, Math.min(5000, Math.round(vph * 0.3)))
+}
+
+// ─── Region ──────────────────────────────────────────────────────────────────
+
+/**
+ * Niche → plausible region pool.
+ * Uses the videoId's first char as a deterministic seed → same video always
+ * maps to the same region (no flicker on re-render).
+ */
+const NICHE_REGIONS: Partial<Record<NicheId, string[]>> = {
+  asmr:       ['KR', 'JP', 'USA', 'GLOBAL'],
+  cars:       ['UAE', 'DE', 'USA', 'UK'],
+  luxury:     ['UAE', 'USA', 'FR', 'GLOBAL'],
+  motivation: ['USA', 'UK', 'GLOBAL', 'BR'],
+  gym:        ['USA', 'UK', 'BR', 'GLOBAL'],
+  anime:      ['JP', 'KR', 'GLOBAL', 'USA'],
+  football:   ['BR', 'UK', 'EU', 'GLOBAL'],
+  ai:         ['USA', 'GLOBAL', 'UK'],
+  cinematic:  ['USA', 'JP', 'GLOBAL', 'UAE'],
+  lifestyle:  ['USA', 'UK', 'GLOBAL', 'CA'],
+}
+
+function regionForVideo(niche: NicheId, videoId: string): string {
+  const pool = NICHE_REGIONS[niche] ?? ['GLOBAL']
+  const seed = (videoId.charCodeAt(0) ?? 0) + (videoId.charCodeAt(2) ?? 0)
+  return pool[seed % pool.length]
 }
 
 // ─── Thumbnail ───────────────────────────────────────────────────────────────
 
+/**
+ * Best available thumbnail URL for a YouTube video.
+ *
+ * Priority: maxresdefault (1280×720) → standard (640×480) → hqdefault (480×360)
+ *
+ * We try two strategies:
+ * 1. Use URLs from the API snippet (most reliable)
+ * 2. Fallback to well-known YouTube CDN patterns
+ *
+ * Note: maxresdefault often 404s for older/short videos.
+ * hqdefault is always available and is used as the final fallback.
+ */
 function bestThumbnail(item: YouTubeSearchItem): string {
-  const t = item.snippet.thumbnails
-  // maxres (1280×720) → high (480×360) → medium → fallback via known URL
+  const t  = item.snippet.thumbnails
+  const id = item.id.videoId
+
   return (
-    t.maxres?.url  ??
-    t.standard?.url ??
-    t.high?.url    ??
-    t.medium?.url  ??
-    `https://i.ytimg.com/vi/${item.id.videoId}/hqdefault.jpg`
+    t.maxres?.url    ??
+    t.standard?.url  ??
+    t.high?.url      ??
+    t.medium?.url    ??
+    // Direct CDN fallback — hqdefault is always present
+    `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
   )
+}
+
+// ─── Creator handle ──────────────────────────────────────────────────────────
+
+/**
+ * Format a channel name into a clean @handle.
+ * YouTube doesn't expose the handle in search snippets, so we derive a
+ * plausible one from the channel title.
+ */
+function formatCreator(channelTitle: string): string {
+  // Remove common suffixes, collapse spaces, lowercase
+  const clean = channelTitle
+    .replace(/\s+(official|channel|shorts|videos|clips|edits|tv|media)$/i, '')
+    .trim()
+
+  // If title already looks like a handle (no spaces, <20 chars), keep it
+  if (!clean.includes(' ') && clean.length <= 20) {
+    return `@${clean.toLowerCase()}`
+  }
+
+  // CamelCase multi-word titles
+  const camel = clean
+    .split(/\s+/)
+    .map((word, i) => i === 0 ? word.toLowerCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join('')
+
+  return `@${camel}`
 }
 
 // ─── Main normalizer ─────────────────────────────────────────────────────────
@@ -72,13 +141,13 @@ export function normalizeVideo(
   videoDetail:  YouTubeVideoItem | undefined,
   niche:        NicheId,
 ): VideoItem {
-  const videoId         = searchItem.id.videoId
+  const videoId = searchItem.id.videoId
   const { title, channelTitle, publishedAt } = searchItem.snippet
 
-  const views       = parseInt(videoDetail?.statistics.viewCount  ?? '0') || 0
-  const likes       = parseInt(videoDetail?.statistics.likeCount  ?? '0') || 0
-  const duration    = parseISODuration(videoDetail?.contentDetails.duration ?? 'PT0S')
-  const tags        = videoDetail?.snippet.tags?.slice(0, 8) ?? []
+  const views    = parseInt(videoDetail?.statistics.viewCount  ?? '0') || 0
+  const likes    = parseInt(videoDetail?.statistics.likeCount  ?? '0') || 0
+  const duration = parseISODuration(videoDetail?.contentDetails.duration ?? 'PT0S')
+  const tags     = videoDetail?.snippet.tags?.slice(0, 8) ?? []
 
   const viralScore    = computeViralScore(views, publishedAt)
   const growthPercent = estimateGrowthPct(views, publishedAt)
@@ -102,13 +171,11 @@ export function normalizeVideo(
     duration <= 60  ? 'short' :
     duration <= 180 ? 'clip'  : 'reel'
 
-  // Creator handle: strip spaces, lowercase, prefix @
-  const creator = `@${channelTitle.replace(/\s+/g, '').toLowerCase()}`
-
   return {
     id:           `yt-${videoId}`,
-    title,
-    creator,
+    youtubeId:    videoId,
+    title:        title.replace(/\s*#shorts\s*/gi, '').trim() || title,
+    creator:      formatCreator(channelTitle),
     thumbnail:    bestThumbnail(searchItem),
     viralScore,
     growthPercent,
@@ -121,7 +188,7 @@ export function normalizeVideo(
     savedCount,
     meta: {
       postedAgo:  formatAgo(publishedAt),
-      trendingIn: 'GLOBAL',
+      trendingIn: regionForVideo(niche, videoId),
       velocity,
       badge,
     },

@@ -25,7 +25,9 @@ export interface YouTubeSearchResponse {
 export interface YouTubeVideoItem {
   id:      string
   snippet: {
-    tags?: string[]
+    tags?:         string[]
+    channelTitle?: string
+    publishedAt?:  string
   }
   statistics: {
     viewCount?:    string

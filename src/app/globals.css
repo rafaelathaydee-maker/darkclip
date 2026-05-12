@@ -151,6 +151,12 @@ body {
   50%      { opacity: 0.72; transform: scale(0.98); }
 }
 
+/* Embed loading dots */
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50%      { opacity: 1;   transform: scale(1.15); }
+}
+
 /* PRO locked — slow hidden-content drift */
 @keyframes locked-drift {
   0%, 100% { transform: scale(1.08) translate(0%, 0%); }

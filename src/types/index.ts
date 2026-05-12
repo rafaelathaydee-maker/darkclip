@@ -22,6 +22,7 @@ export interface VideoMeta {
 
 export interface VideoItem {
   id: string
+  youtubeId?: string      // raw YouTube video ID — undefined for mock/demo items
   title: string
   creator: string
   thumbnail: string
@@ -35,6 +36,13 @@ export interface VideoItem {
   duration: number        // seconds
   savedCount: number
   meta: VideoMeta
+}
+
+/** Return the raw YouTube video ID for any VideoItem. Empty string for mock items. */
+export function getYouTubeId(video: VideoItem): string {
+  if (video.youtubeId) return video.youtubeId
+  if (video.id.startsWith('yt-')) return video.id.slice(3)
+  return ''
 }
 
 export interface Niche {
