@@ -67,10 +67,10 @@ export function VideoDetailDrawer({ video, onClose }: VideoDetailDrawerProps) {
   }
 
   const handleDownload = () => {
-    const clipPath = getDemoClipPath(video.id, video.niche)
+    const clipPath = getDemoClipPath(video.id, video.niche, video.savedCount)
     const filename  = toFilename(video.title)
     downloadDemoClip(clipPath, filename)
-    toast(`Download iniciado — ${filename}`, 'success')
+    toast(`Sample clip baixado — ${filename}`, 'success')
   }
 
   const handleWatchOnYouTube = () => {
@@ -313,67 +313,100 @@ export function VideoDetailDrawer({ video, onClose }: VideoDetailDrawerProps) {
                 </span>
               </div>
 
-              {/* Action buttons */}
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={handleCopyLink}
-                  className={cn(
-                    'flex items-center justify-center gap-2 h-10 rounded-xl text-[13px] font-medium',
-                    'bg-[var(--color-surface-2)] border border-[var(--color-border)]',
-                    'text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-border-2)]',
-                    'transition-all duration-150 active:scale-[0.97]'
-                  )}
-                >
-                  <Copy size={13} />
-                  {ytUrl ? 'Copy YT link' : 'Copy link'}
-                </button>
+              {/* ── Download block ─────────────────────────────────── */}
+              <div className="flex flex-col gap-2">
 
+                {/* Download sample clip */}
                 {isPro ? (
                   <button
                     onClick={handleDownload}
                     className={cn(
-                      'flex items-center justify-center gap-2 h-10 rounded-xl text-[13px] font-medium relative',
-                      'bg-[var(--color-accent)]/15 border border-[var(--color-accent)]/35 text-[var(--color-accent)]',
-                      'hover:bg-[var(--color-accent)]/22 hover:border-[var(--color-accent)]/55',
-                      'transition-all duration-150 active:scale-[0.97]'
+                      'flex flex-col items-start gap-0.5 w-full px-4 py-3 rounded-xl relative',
+                      'bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/30',
+                      'hover:bg-[var(--color-accent)]/18 hover:border-[var(--color-accent)]/50',
+                      'transition-all duration-150 active:scale-[0.98]'
                     )}
                   >
-                    <Download size={13} />
-                    Download
-                    <span className="absolute -top-1 -right-1 px-1 rounded text-[8px] font-mono uppercase bg-[var(--color-accent)] text-black font-bold">demo</span>
+                    <div className="flex items-center gap-2 w-full">
+                      <Download size={13} className="text-[var(--color-accent)] shrink-0" />
+                      <span className="text-[13px] font-medium text-[var(--color-accent)]">Download sample clip</span>
+                      <span className="ml-auto px-1.5 py-0.5 rounded text-[8px] font-mono uppercase bg-[var(--color-accent)] text-black font-bold shrink-0">
+                        pro
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-[var(--color-faint)] pl-[21px]">
+                      Licensed demo asset · not the YouTube video
+                    </p>
                   </button>
                 ) : (
                   <button
                     onClick={() => handleLocked('download')}
                     className={cn(
-                      'flex items-center justify-center gap-2 h-10 rounded-xl text-[13px] font-medium relative',
-                      'bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-faint)]',
+                      'flex flex-col items-start gap-0.5 w-full px-4 py-3 rounded-xl relative',
+                      'bg-[var(--color-surface-2)] border border-[var(--color-border)]',
+                      'hover:border-[var(--color-border-2)]',
+                      'transition-all duration-150 active:scale-[0.98]'
+                    )}
+                  >
+                    <div className="flex items-center gap-2 w-full">
+                      <Lock size={11} className="text-[var(--color-accent)] shrink-0" />
+                      <span className="text-[13px] font-medium text-[var(--color-faint)]">Download sample clip</span>
+                      <span className="ml-auto px-1.5 py-0.5 rounded text-[8px] font-mono uppercase bg-[var(--color-accent)] text-black font-bold shrink-0">
+                        pro
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-[var(--color-faint)] pl-[21px]">
+                      Acesso Pro para baixar demo assets
+                    </p>
+                  </button>
+                )}
+
+                {/* View source — YouTube link or copy */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={handleCopyLink}
+                    className={cn(
+                      'flex items-center justify-center gap-2 h-9 rounded-xl text-[12px] font-medium',
+                      'bg-[var(--color-surface-2)] border border-[var(--color-border)]',
+                      'text-[var(--color-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-border-2)]',
                       'transition-all duration-150 active:scale-[0.97]'
                     )}
                   >
-                    <Lock size={11} className="text-[var(--color-accent)]" />
-                    Download
-                    <span className="absolute -top-1 -right-1 px-1 rounded text-[8px] font-mono uppercase bg-[var(--color-accent)] text-black font-bold">pro</span>
+                    <Copy size={12} />
+                    Copy link
                   </button>
-                )}
-              </div>
 
-              {/* Watch on YouTube — full-width CTA for real videos */}
-              {ytUrl && (
-                <button
-                  onClick={handleWatchOnYouTube}
-                  className={cn(
-                    'flex items-center justify-center gap-2 w-full h-10 rounded-xl text-[13px] font-medium',
-                    'bg-[#FF0000]/10 border border-[#FF0000]/25 text-[#FF4444]',
-                    'hover:bg-[#FF0000]/18 hover:border-[#FF0000]/40',
-                    'transition-all duration-150 active:scale-[0.97]'
+                  {ytUrl ? (
+                    <button
+                      onClick={handleWatchOnYouTube}
+                      className={cn(
+                        'flex items-center justify-center gap-1.5 h-9 rounded-xl text-[12px] font-medium',
+                        'bg-[#FF0000]/8 border border-[#FF0000]/20 text-[#FF5555]',
+                        'hover:bg-[#FF0000]/15 hover:border-[#FF0000]/35',
+                        'transition-all duration-150 active:scale-[0.97]'
+                      )}
+                    >
+                      <PlayCircle size={12} />
+                      YouTube source
+                      <ExternalLink size={9} className="opacity-60" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={isPro ? handleViewSource : () => handleLocked('source')}
+                      className={cn(
+                        'flex items-center justify-center gap-2 h-9 rounded-xl text-[12px]',
+                        'border border-[var(--color-border)] text-[var(--color-faint)]',
+                        'hover:border-[var(--color-border-2)] hover:text-[var(--color-muted)]',
+                        'transition-all duration-150 active:scale-[0.97]'
+                      )}
+                    >
+                      <ExternalLink size={12} />
+                      View source
+                      {!isPro && <Lock size={9} className="text-[var(--color-accent)]" />}
+                    </button>
                   )}
-                >
-                  <PlayCircle size={14} />
-                  Watch on YouTube
-                  <ExternalLink size={11} className="opacity-60" />
-                </button>
-              )}
+                </div>
+              </div>
 
               {/* Separator */}
               <div className="h-px bg-[var(--color-border)]" />
@@ -451,21 +484,6 @@ export function VideoDetailDrawer({ video, onClose }: VideoDetailDrawerProps) {
                 )}
               </div>
 
-              {/* View source */}
-              <button
-                onClick={isPro ? handleViewSource : () => handleLocked('source')}
-                className={cn(
-                  'flex items-center justify-center gap-2 w-full h-10 rounded-xl text-[13px]',
-                  'transition-all duration-150 active:scale-[0.97]',
-                  isPro
-                    ? 'border border-[var(--color-border-2)] text-[var(--color-muted)] hover:border-[var(--color-accent)]/40 hover:text-[var(--color-text)]'
-                    : 'border border-[var(--color-border)] text-[var(--color-faint)] hover:border-[var(--color-border-2)]'
-                )}
-              >
-                <ExternalLink size={13} />
-                View source
-                {!isPro && <Lock size={10} className="text-[var(--color-accent)]" />}
-              </button>
 
             </div>
           </motion.aside>

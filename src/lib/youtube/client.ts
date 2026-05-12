@@ -2,11 +2,13 @@ import type { YouTubeSearchResponse, YouTubeVideosResponse } from './types'
 
 const BASE = 'https://www.googleapis.com/youtube/v3'
 
-/**
- * ISO timestamp for N days ago — used to constrain search to recent content.
- */
-function daysAgo(n: number): string {
-  return new Date(Date.now() - n * 24 * 60 * 60 * 1_000).toISOString()
+export interface SearchOptions {
+  /**
+   * ISO timestamp — only return videos published after this date.
+   * Pass `undefined` for no date restriction (wider net for fallback queries).
+   */
+  publishedAfter?: string
+  maxResults?: number
 }
 
 /**
@@ -15,17 +17,19 @@ function daysAgo(n: number): string {
  * Filters applied:
  *   - videoDuration=short       → clips ≤ ~4 minutes (API-level)
  *   - videoEmbeddable=true      → only embeddable videos
- *   - publishedAfter            → last 90 days (keeps feed fresh)
- *   - order=viewCount           → most-viewed recent Shorts surface first
- *   - relevanceLanguage=en      → English-language results by default
+ *   - order=viewCount           → most-viewed Shorts surface first
+ *   - relevanceLanguage=en      → English-language results
+ *   - publishedAfter            → optional; omit for broader fallback searches
  *
  * We additionally filter to ≤ 90s during normalization.
  */
 export async function searchShorts(
-  query:      string,
-  apiKey:     string,
-  maxResults  = 25,
+  query:   string,
+  apiKey:  string,
+  options: SearchOptions = {},
 ): Promise<YouTubeSearchResponse> {
+  const { publishedAfter, maxResults = 25 } = options
+
   const params = new URLSearchParams({
     part:             'snippet',
     type:             'video',
@@ -33,16 +37,15 @@ export async function searchShorts(
     videoEmbeddable:  'true',
     order:            'viewCount',
     q:                query,
-    publishedAfter:   daysAgo(90),
     relevanceLanguage:'en',
     maxResults:       String(maxResults),
     key:              apiKey,
   })
 
-  const res = await fetch(`${BASE}/search?${params}`, {
-    // Let Next.js handle edge caching — we do our own in-memory TTL
-    cache: 'no-store',
-  })
+  // Only add publishedAfter when explicitly provided
+  if (publishedAfter) params.set('publishedAfter', publishedAfter)
+
+  const res = await fetch(`${BASE}/search?${params}`, { cache: 'no-store' })
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
@@ -74,4 +77,9 @@ export async function fetchVideoDetails(
     return { error: err?.error ?? { code: res.status, message: res.statusText } }
   }
   return res.json() as Promise<YouTubeVideosResponse>
+}
+
+/** ISO timestamp for N days ago — used to constrain search to recent content */
+export function daysAgo(n: number): string {
+  return new Date(Date.now() - n * 24 * 60 * 60 * 1_000).toISOString()
 }

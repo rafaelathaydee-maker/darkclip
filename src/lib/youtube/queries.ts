@@ -1,25 +1,95 @@
 import type { NicheId } from '@/types'
 
 /**
- * Search queries per niche — optimised for YouTube Shorts relevance.
+ * Multiple search queries per niche — tried in order.
  *
  * Strategy:
- *   - Include "#shorts" in the query (creators tag their Shorts with it)
- *   - Use niche-defining keywords that surface high-engagement content
- *   - Avoid overly generic terms that pull in non-Shorts content
- *   - `all` is excluded: it's computed by merging all other niches
+ *   - If query[0] returns < MIN_VIDEOS_PER_NICHE results, try query[1], and so on.
+ *   - Queries are ordered from most specific (likely to return Shorts) to broadest.
+ *   - Later queries intentionally broader so they succeed even without #shorts tag.
+ *   - `all` is excluded — computed by merging every other niche.
  */
-export const NICHE_QUERIES: Partial<Record<NicheId, string>> = {
-  asmr:       'asmr satisfying sounds relaxing #shorts',
-  cars:       'supercar hypercar cinematic driving #shorts',
-  luxury:     'luxury lifestyle billionaire rich #shorts',
-  motivation: 'motivation mindset discipline hustle #shorts',
-  gym:        'gym workout physique aesthetic #shorts',
-  anime:      'anime edit amv cinematic 4k #shorts',
-  football:   'football soccer skills goals highlights #shorts',
-  ai:         'ai tools artificial intelligence productivity #shorts',
-  cinematic:  'cinematic video edit short film #shorts',
-  lifestyle:  'aesthetic lifestyle morning routine vlog #shorts',
+export const NICHE_QUERIES: Partial<Record<NicheId, string[]>> = {
+  asmr: [
+    'asmr shorts',
+    'satisfying asmr shorts',
+    'soap cutting asmr',
+    'keyboard asmr shorts',
+    'relaxing sounds shorts',
+    'oddly satisfying shorts',
+  ],
+
+  cars: [
+    'supercar edit shorts',
+    'car edit shorts',
+    'bmw edit shorts',
+    'porsche edit shorts',
+    'jdm edit shorts',
+  ],
+
+  luxury: [
+    'luxury lifestyle shorts',
+    'millionaire lifestyle shorts',
+    'billionaire lifestyle shorts',
+    'expensive cars lifestyle',
+    'luxury motivation shorts',
+  ],
+
+  motivation: [
+    'motivation shorts',
+    'discipline motivation shorts',
+    'mindset shorts',
+    'success motivation shorts',
+  ],
+
+  gym: [
+    'gym motivation shorts',
+    'fitness edit shorts',
+    'workout motivation shorts',
+    'bodybuilding shorts',
+  ],
+
+  anime: [
+    'anime edit shorts',
+    'gojo edit shorts',
+    'anime transition shorts',
+    'anime amv shorts',
+  ],
+
+  football: [
+    'football edit shorts',
+    'soccer skills shorts',
+    'football moments shorts',
+    'champions league shorts',
+  ],
+
+  ai: [
+    'ai tools shorts',
+    'artificial intelligence shorts',
+    'chatgpt shorts',
+    'ai video shorts',
+  ],
+
+  cinematic: [
+    'cinematic edit shorts',
+    'movie edit shorts',
+    'cinematic b roll shorts',
+    'dark aesthetic shorts',
+  ],
+
+  lifestyle: [
+    'lifestyle aesthetic shorts',
+    'daily vlog aesthetic shorts',
+    'morning routine shorts',
+    'aesthetic life shorts',
+  ],
 }
 
+/** Ordered list of all niche IDs (excludes 'all') */
 export const NICHE_IDS = Object.keys(NICHE_QUERIES) as NicheId[]
+
+/** Minimum real-video count before we stop trying more queries for a niche */
+export const MIN_VIDEOS_PER_NICHE = 6
+
+/** Maximum API calls per niche per cache miss (quota protection) */
+export const MAX_QUERIES_PER_NICHE = 3

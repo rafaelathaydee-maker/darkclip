@@ -291,6 +291,68 @@ export const MOCK_VIDEOS: VideoItem[] = [
     meta: { postedAgo: '9h ago', trendingIn: 'CA', badge: 'LOW COMP' },
   },
 
+  // ── ASMR (extra entries for fallback depth) ───────────────────────────────
+  {
+    id: 'v033', title: 'Rain on Window ASMR — Pure Sleep Sounds',
+    creator: '@rainasmr', thumbnail: t(3),
+    viralScore: 87, growthPercent: 580, views: 3_800_000,
+    niche: 'asmr', tags: ['asmr', 'rain', 'sleep', 'relaxing'],
+    isExploding: false, format: 'short', duration: 58, savedCount: 1900,
+    meta: { postedAgo: '4h ago', trendingIn: 'USA', badge: 'HIGH REPLAY' },
+  },
+  {
+    id: 'v034', title: 'Tapping on Crystals ASMR — No Talking 4K',
+    creator: '@crystaltingles', thumbnail: t(3),
+    viralScore: 90, growthPercent: 780, views: 5_200_000,
+    niche: 'asmr', tags: ['asmr', 'crystals', 'tapping', '4k'],
+    isExploding: true, format: 'short', duration: 55, savedCount: 2700,
+    meta: { postedAgo: '1h ago', trendingIn: 'KR', velocity: '+580% in 3h', badge: 'HIGH REPLAY' },
+  },
+  {
+    id: 'v035', title: 'Page Turning ASMR — Vintage Books Collection',
+    creator: '@bookasmr', thumbnail: t(17),
+    viralScore: 83, growthPercent: 290, views: 1_400_000,
+    niche: 'asmr', tags: ['asmr', 'books', 'page turning', 'library'],
+    isExploding: false, format: 'clip', duration: 49, savedCount: 680,
+    meta: { postedAgo: '12h ago', trendingIn: 'UK', badge: 'LOW COMP' },
+  },
+
+  // ── CINEMATIC (extra entries for fallback depth) ───────────────────────────
+  {
+    id: 'v036', title: 'Seoul at 3AM — Cinematic Walk No Talking',
+    creator: '@streetcinema', thumbnail: t(4),
+    viralScore: 91, growthPercent: 920, views: 6_100_000,
+    niche: 'cinematic', tags: ['seoul', 'cinematic', 'night', 'walk', '4k'],
+    isExploding: false, format: 'short', duration: 54, savedCount: 3800,
+    meta: { postedAgo: '3h ago', trendingIn: 'KR', badge: 'HIGH REPLAY' },
+  },
+  {
+    id: 'v037', title: 'Fog Over Mountains — Drone Cinematic 6K',
+    creator: '@droneartistry', thumbnail: t(18),
+    viralScore: 89, growthPercent: 740, views: 4_600_000,
+    niche: 'cinematic', tags: ['drone', 'fog', 'mountains', 'cinematic', '6k'],
+    isExploding: false, format: 'short', duration: 47, savedCount: 2400,
+    meta: { postedAgo: '6h ago', trendingIn: 'GLOBAL', badge: 'LOW COMP' },
+  },
+
+  // ── LIFESTYLE (extra entries for fallback depth) ───────────────────────────
+  {
+    id: 'v038', title: 'Tokyo Apartment Tour — 24sqm Perfect Layout',
+    creator: '@tokyoliving', thumbnail: t(7),
+    viralScore: 92, growthPercent: 1050, views: 7_300_000,
+    niche: 'lifestyle', tags: ['tokyo', 'apartment', 'minimalist', 'japan', 'interior'],
+    isExploding: true, format: 'short', duration: 58, savedCount: 4600,
+    meta: { postedAgo: '49m ago', trendingIn: 'JP', velocity: '+820% in 4h', badge: 'HIGH REPLAY' },
+  },
+  {
+    id: 'v039', title: 'Slow Evening Routine — Candles, Tea, No Screen',
+    creator: '@quietevening', thumbnail: t(15),
+    viralScore: 86, growthPercent: 510, views: 2_800_000,
+    niche: 'lifestyle', tags: ['evening routine', 'slow life', 'wellness', 'calm'],
+    isExploding: false, format: 'clip', duration: 52, savedCount: 1300,
+    meta: { postedAgo: '8h ago', trendingIn: 'CA', badge: 'LOW COMP' },
+  },
+
   // ── HIGH-PERFORMANCE ──────────────────────────────────────────────────────
   {
     id: 'v029', title: 'Bugatti Tourbillon — Design Process Fully Revealed',
@@ -340,30 +402,74 @@ export const NICHES: Niche[] = [
   { id: 'lifestyle',  label: 'Lifestyle'   },
 ]
 
+// ── Section filter helpers ────────────────────────────────────────────────────
+
+/** Minimum cards before a section is considered "populated" */
+const MIN_SECTION_CARDS = 4
+
+/**
+ * Ensure a section always returns at least MIN_SECTION_CARDS videos.
+ * If the primary filter doesn't produce enough, pad with the highest
+ * viral-score videos from the remaining pool.
+ */
+function withFallback(
+  primary: VideoItem[],
+  all: VideoItem[],
+  max = 12,
+): VideoItem[] {
+  if (primary.length >= MIN_SECTION_CARDS) return primary.slice(0, max)
+  const primaryIds = new Set(primary.map(v => v.id))
+  const pad = [...all]
+    .sort((a, b) => b.viralScore - a.viralScore)
+    .filter(v => !primaryIds.has(v.id))
+    .slice(0, MIN_SECTION_CARDS - primary.length)
+  return [...primary, ...pad].slice(0, max)
+}
+
 export const FEED_SECTIONS: FeedSectionConfig[] = [
   {
     id: 'exploding',
     title: 'Live Signals',
-    filter: (v) => v.filter((x) => x.isExploding).sort((a, b) => b.growthPercent - a.growthPercent),
+    filter: (v) => {
+      const exploding = v
+        .filter(x => x.isExploding)
+        .sort((a, b) => b.growthPercent - a.growthPercent)
+      // Fallback: real YouTube data often won't have isExploding=true
+      // (videos > 72h old) — pad with highest viral-score videos instead
+      return withFallback(exploding, v, 12)
+    },
   },
   {
     id: 'fastest',
     title: 'Fastest Growth',
-    filter: (v) => [...v].sort((a, b) => b.growthPercent - a.growthPercent).slice(0, 10),
+    filter: (v) => [...v].sort((a, b) => b.growthPercent - a.growthPercent).slice(0, 12),
   },
   {
     id: 'low-comp',
     title: 'Low Competition',
-    filter: (v) => v.filter((x) => x.viralScore >= 85 && x.views < 5_000_000).sort((a, b) => b.viralScore - a.viralScore),
+    filter: (v) => {
+      // Lower threshold to avoid empty sections with real YouTube data
+      // (real popular videos often have views > 5M)
+      const primary = v
+        .filter(x => x.viralScore >= 80 && x.views < 8_000_000)
+        .sort((a, b) => b.viralScore - a.viralScore)
+      return withFallback(primary, v, 12)
+    },
   },
   {
     id: 'high-replay',
     title: 'High Replay',
-    filter: (v) => v.filter((x) => x.duration <= 55).sort((a, b) => b.savedCount - a.savedCount),
+    filter: (v) => {
+      // Real Shorts are often 55–90s — widen the cutoff
+      const primary = v
+        .filter(x => x.duration <= 65)
+        .sort((a, b) => b.savedCount - a.savedCount)
+      return withFallback(primary, v, 12)
+    },
   },
   {
     id: 'top-saved',
     title: 'Most Saved',
-    filter: (v) => [...v].sort((a, b) => b.savedCount - a.savedCount).slice(0, 10),
+    filter: (v) => [...v].sort((a, b) => b.savedCount - a.savedCount).slice(0, 12),
   },
 ]
