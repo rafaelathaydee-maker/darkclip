@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Eye, Bookmark, Lock, MapPin, Zap, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -30,6 +30,35 @@ export function VideoCard({ video, locked = false, onOpen }: VideoCardProps) {
   const [showEmbed, setShowEmbed]     = useState(false)
   const [embedReady, setEmbedReady]   = useState(false)
   const embedTimer                    = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // ── Thumbnail fallback chain ──────────────────────────────────────────────
+  // maxresdefault may 404 for smaller channels.
+  // onError walks through sddefault → hqdefault → mqdefault automatically.
+  const [thumbSrc, setThumbSrc]       = useState(video.thumbnail)
+  const thumbAttempt                  = useRef(0)
+
+  // Reset thumbnail state whenever the video changes
+  useEffect(() => {
+    setThumbSrc(video.thumbnail)
+    thumbAttempt.current = 0
+  }, [video.id, video.thumbnail])
+
+  const handleThumbError = useCallback(() => {
+    const ytId = getYouTubeId(video)
+    if (!ytId) return                      // mock data — no fallbacks needed
+
+    const fallbacks = [
+      `https://i.ytimg.com/vi/${ytId}/sddefault.jpg`,
+      `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`,
+      `https://i.ytimg.com/vi/${ytId}/mqdefault.jpg`,
+    ]
+
+    const idx = thumbAttempt.current++
+    if (idx < fallbacks.length) {
+      setThumbSrc(fallbacks[idx])
+    }
+    // If all fallbacks exhausted the container bg-surface-3 acts as placeholder
+  }, [video])
   const toast                         = useToast()
   const { openModal }                 = useConversion()
   const { isPro }                     = useFounder()
@@ -128,8 +157,9 @@ export function VideoCard({ video, locked = false, onOpen }: VideoCardProps) {
         {/* Static thumbnail — always rendered, fades out when embed loads */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={video.thumbnail}
+          src={thumbSrc}
           alt={video.title}
+          onError={handleThumbError}
           className={cn(
             'absolute inset-0 w-full h-full object-cover',
             'transition-[filter,opacity] duration-300',

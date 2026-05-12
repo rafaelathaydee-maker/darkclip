@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X, TrendingUp, Eye, Download,
@@ -57,6 +57,22 @@ export function VideoDetailDrawer({ video, onClose }: VideoDetailDrawerProps) {
 
   const ytId     = getYouTubeId(video)
   const ytUrl    = ytId ? `https://www.youtube.com/shorts/${ytId}` : null
+
+  // Thumbnail fallback — same chain as VideoCard
+  const [thumbSrc, setThumbSrc]   = useState(video.thumbnail)
+  const thumbAttempt              = useRef(0)
+  useEffect(() => { setThumbSrc(video.thumbnail); thumbAttempt.current = 0 }, [video.id, video.thumbnail])
+
+  const handleThumbError = () => {
+    if (!ytId) return
+    const fallbacks = [
+      `https://i.ytimg.com/vi/${ytId}/sddefault.jpg`,
+      `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`,
+      `https://i.ytimg.com/vi/${ytId}/mqdefault.jpg`,
+    ]
+    const idx = thumbAttempt.current++
+    if (idx < fallbacks.length) setThumbSrc(fallbacks[idx])
+  }
   const embedSrc = ytId
     ? `https://www.youtube.com/embed/${ytId}?autoplay=1&mute=0&controls=1&rel=0&modestbranding=1&origin=${typeof window !== 'undefined' ? window.location.origin : ''}`
     : null
@@ -158,8 +174,9 @@ export function VideoDetailDrawer({ video, onClose }: VideoDetailDrawerProps) {
                 {!embedLoaded && (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img
-                    src={video.thumbnail}
+                    src={thumbSrc}
                     alt={video.title}
+                    onError={handleThumbError}
                     className="absolute inset-0 w-full h-full object-cover opacity-40"
                     draggable={false}
                   />
@@ -206,8 +223,9 @@ export function VideoDetailDrawer({ video, onClose }: VideoDetailDrawerProps) {
               <div className="relative w-full aspect-[3/4] shrink-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={video.thumbnail}
+                  src={thumbSrc}
                   alt={video.title}
+                  onError={handleThumbError}
                   className="w-full h-full object-cover"
                   draggable={false}
                 />

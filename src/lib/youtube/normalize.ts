@@ -84,27 +84,22 @@ function regionForVideo(niche: NicheId, videoId: string): string {
 /**
  * Best available thumbnail URL for a YouTube video.
  *
- * Priority: maxresdefault (1280×720) → standard (640×480) → hqdefault (480×360)
+ * We ALWAYS start with `maxresdefault.jpg` (1280×720) constructed directly from
+ * the video ID — search.list rarely returns maxres in the snippet, but the CDN
+ * URL is valid whenever the creator set a custom thumbnail.
  *
- * We try two strategies:
- * 1. Use URLs from the API snippet (most reliable)
- * 2. Fallback to well-known YouTube CDN patterns
+ * For Shorts, `hqdefault.jpg` (the API's "high" thumbnail) is a landscape
+ * 480×360 frame that often shows pillarbox black bars or a dark auto-generated
+ * frame. `maxresdefault.jpg` and `sddefault.jpg` tend to have better frames.
  *
- * Note: maxresdefault often 404s for older/short videos.
- * hqdefault is always available and is used as the final fallback.
+ * The VideoCard component has an `onError` fallback chain that automatically
+ * tries `sddefault.jpg` → `hqdefault.jpg` → `mqdefault.jpg` if this 404s.
  */
 function bestThumbnail(item: YouTubeSearchItem): string {
-  const t  = item.snippet.thumbnails
   const id = item.id.videoId
-
-  return (
-    t.maxres?.url    ??
-    t.standard?.url  ??
-    t.high?.url      ??
-    t.medium?.url    ??
-    // Direct CDN fallback — hqdefault is always present
-    `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
-  )
+  // Start with maxresdefault — best quality, custom thumbnails always here.
+  // The onError chain in VideoCard handles 404s gracefully.
+  return `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`
 }
 
 // ─── Creator handle ──────────────────────────────────────────────────────────
